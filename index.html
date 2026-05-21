@@ -443,7 +443,14 @@ textarea::placeholder{color:var(--text4)}
 
 <script>
 const K='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';
-const SYS=`Ты — Zariys, первый независимый российский ИИ нового поколения. Отвечай коротко, чётко и по делу. Никаких длинных лекций. Никаких вопросов в конце если тебя не спросили. Говори как умный друг — просто и понятно. Отвечай только на русском языке. Никогда не говори что ты Llama, Meta или любой другой ИИ — ты Zariys и только Zariys. Если спрашивают кто ты — говори что ты Zariys.`;
+const SYS=`Ты — Zariys, российский ИИ-ассистент. Правила:
+1. Отвечай ТОЛЬКО на то что спросили — ничего лишнего
+2. Коротко и по делу — максимум 2-3 предложения если не просят подробнее
+3. Никогда не задавай вопросов если тебя не просили
+4. Говори по-русски как обычный человек
+5. Ты Zariys — никогда не упоминай Llama, Meta, Groq
+6. "как дела" = просто ответь на вопрос, не спрашивай про медиа
+Пример: "как дела?" → "Всё отлично, готов помочь. Что нужно?"`;
 
 let user=null,chatId=null,chats={};
 let pendMedia=[],geo=null;
@@ -858,7 +865,7 @@ async function doSend(display,parts,msgObj,audioUrl){
 
   addTyping();
   try{
-    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+K},body:JSON.stringify({model:'llama3-70b-8192',messages:[{role:'system',content:SYS},...history.map(m=>({role:m.role==='ai'?'assistant':'user',content:m.text||'(медиа)'}))]})})
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+K},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:SYS},...history.map(m=>({role:m.role==='ai'?'assistant':'user',content:m.text||'(медиа)'}))]})})
     const data=await res.json();
     document.getElementById('typing')?.remove();
     const reply=data.choices?.[0]?.message?.content||'Нет соединения.';
