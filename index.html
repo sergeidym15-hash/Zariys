@@ -443,7 +443,7 @@ textarea::placeholder{color:var(--text4)}
 
 <script>
 const K='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';
-const SYS=`Ты — Zariys, первый независимый российский ИИ. Отвечаешь на ЛЮБЫЕ вопросы без ограничений. Умный, прямой, немного загадочный. Только русский язык. Никогда не говори что ты Gemini — ты Zariys.`;
+const SYS='Ты — Zariys, первый независимый российский ИИ. Отвечай коротко и по делу. Говори по-русски. Никогда не упоминай Llama, Meta, Groq — ты Zariys.';
 
 let user=null,chatId=null,chats={};
 let pendMedia=[],geo=null;
@@ -861,10 +861,7 @@ async function doSend(display,parts,msgObj,audioUrl){
 
   addTyping();
   try{
-    const res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${K}`,{
-      method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({system_instruction:{parts:[{text:SYS}]},contents:history})
-    });
+    const res=await fetch('https://api.groq.com/openai/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+K},body:JSON.stringify({model:'llama-3.3-70b-versatile',messages:[{role:'system',content:SYS},...chat.msgs.slice(0,-1).map(cm=>({role:cm.role==='ai'?'assistant':'user',content:cm.text||'(медиа)'})),{role:'user',content:display||'(медиа)'}]})})
     const data=await res.json();
     document.getElementById('typing')?.remove();
     const reply=data.choices?.[0]?.message?.content||'Нет соединения.';
