@@ -213,12 +213,34 @@ textarea::placeholder{color:var(--text4)}
 .inp-hint{text-align:center;font-size:9px;color:var(--text4);margin-top:4px;letter-spacing:1px;opacity:0.3}
 
 @media(max-width:640px){
-  .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);z-index:200;width:240px}
-  .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,0.6)}
+  .sidebar{position:fixed;left:0;top:0;bottom:0;transform:translateX(-100%);z-index:200;width:80vw;max-width:280px}
+  .sidebar.open{transform:translateX(0);box-shadow:4px 0 24px rgba(0,0,0,0.7)}
   .sb-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:199;display:none}
   .sb-overlay.on{display:block}
   .msg{max-width:92%}
   .stxt{display:none}
+  .hdr{padding:8px 10px}
+  .hdr-btn{padding:4px 6px;font-size:9px}
+  .inp-area{padding:6px 10px 10px}
+  .inp-row{padding:7px 10px}
+  textarea{font-size:14px}
+  .actions{gap:4px}
+  .abtn{padding:5px 7px;font-size:9px;letter-spacing:0.5px}
+  .abtn svg{width:10px;height:10px}
+  .msgs{padding:10px}
+  .msg-bbl{font-size:13px;padding:8px 11px}
+  .auth-card{padding:24px 20px}
+  .modal{padding:20px 16px}
+  .themes-grid{grid-template-columns:repeat(2,1fr)}
+  .send{width:36px;height:36px}
+  .send svg{width:14px;height:14px}
+  body{height:100dvh}
+  .inp-hint{display:none}
+}
+@media(max-width:380px){
+  .abtn span{display:none}
+  .abtn svg{margin:0}
+  .abtn{padding:6px 8px}
 }
 </style>
 </head>
