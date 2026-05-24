@@ -242,6 +242,11 @@ textarea::placeholder{color:var(--text4)}
   .abtn svg{margin:0}
   .abtn{padding:6px 8px}
 }
+.cam-preview{position:fixed;bottom:140px;right:16px;width:120px;height:90px;border-radius:10px;border:1px solid var(--border2);object-fit:cover;z-index:10;display:none;background:#000}
+.cam-preview.on{display:block}
+.live-indicator{position:fixed;bottom:235px;right:16px;font-size:9px;letter-spacing:2px;color:#cc4444;background:var(--bg2);border:0.5px solid #cc4444;padding:3px 8px;border-radius:20px;z-index:10;display:none}
+.live-indicator.on{display:flex;align-items:center;gap:4px}
+.live-dot{width:5px;height:5px;border-radius:50%;background:#cc4444;animation:blink 0.8s ease-in-out infinite}
 </style>
 </head>
 <body>
@@ -448,6 +453,14 @@ textarea::placeholder{color:var(--text4)}
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
             ЭКРАН
           </button>
+          <button class="abtn" id="camBtn" onclick="toggleCamera()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            КАМЕРА
+          </button>
+          <button class="abtn" id="liveBtn" onclick="toggleLive()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+            LIVE
+          </button>
         </div>
         <input type="file" id="fileIn" accept="image/*,video/*" multiple style="display:none" onchange="onFileInput(event)"/>
         <div class="inp-row" id="inpRow">
@@ -462,6 +475,9 @@ textarea::placeholder{color:var(--text4)}
   </div>
 </div>
 <canvas id="scrCanvas" style="display:none"></canvas>
+<video id="camPreview" class="cam-preview" autoplay muted playsinline></video>
+<div class="live-indicator" id="liveIndicator"><div class="live-dot"></div>LIVE</div>
+<canvas id="camCanvas" style="display:none"></canvas>
 
 <script>
 const K='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';
@@ -890,11 +906,93 @@ async function doSend(display,parts,msgObj,audioUrl){
     const aiMsg={role:'ai',text:reply,time:now()};
     chat.msgs.push(aiMsg);saveChats();
     renderMsg(aiMsg,false);
+    if(autoSpeak&&aiMsg.text){
+      const u=new SpeechSynthesisUtterance(aiMsg.text);
+      u.lang='ru-RU';u.rate=1;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    }
   }catch(err){
     document.getElementById('typing')?.remove();
     renderMsg({role:'ai',text:'Нет соединения с сервером.',time:now()},false);
   }
   document.getElementById('sendBtn').disabled=false;
+
+// CAMERA
+let camStream=null,camInt=null;
+async function toggleCamera(){
+  if(camStream){stopCamera();return;}
+  try{
+    camStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
+    const vid=document.getElementById('camPreview');
+    vid.srcObject=camStream;vid.classList.add('on');
+    document.getElementById('camBtn').classList.add('on');
+    camInt=setInterval(()=>{
+      const c=document.getElementById('camCanvas');
+      c.width=vid.videoWidth||640;c.height=vid.videoHeight||480;
+      c.getContext('2d').drawImage(vid,0,0,c.width,c.height);
+    },100);
+  }catch(e){putMsg({role:'ai',text:'Нет доступа к камере.'});}
+}
+function stopCamera(){
+  if(camStream)camStream.getTracks().forEach(t=>t.stop());
+  camStream=null;if(camInt)clearInterval(camInt);
+  document.getElementById('camPreview').classList.remove('on');
+  document.getElementById('camBtn').classList.remove('on');
+}
+function getCamFrame(){
+  if(!camStream)return null;
+  const c=document.getElementById('camCanvas');
+  return c.toDataURL('image/jpeg',0.7).split(',')[1];
+}
+
+// LIVE MODE - voice in, voice out
+let liveMode=false,liveRecog=null,autoSpeak=false;
+function toggleLive(){
+  if(liveMode){stopLive();return;}
+  if(!('webkitSpeechRecognition' in window)&&!('SpeechRecognition' in window)){
+    putMsg({role:'ai',text:'Голосовой ввод не поддерживается в этом браузере. Используй Chrome.'});return;
+  }
+  liveMode=true;autoSpeak=true;
+  document.getElementById('liveBtn').classList.add('on');
+  document.getElementById('liveIndicator').classList.add('on');
+  startLiveRecog();
+}
+function stopLive(){
+  liveMode=false;autoSpeak=false;
+  if(liveRecog)liveRecog.stop();
+  document.getElementById('liveBtn').classList.remove('on');
+  document.getElementById('liveIndicator').classList.remove('on');
+}
+function startLiveRecog(){
+  if(!liveMode)return;
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  liveRecog=new SR();
+  liveRecog.lang='ru-RU';
+  liveRecog.continuous=false;
+  liveRecog.interimResults=false;
+  liveRecog.onresult=async(e)=>{
+    const txt=e.results[0][0].transcript;
+    if(!txt.trim())return;
+    document.getElementById('inpTxt').value=txt;
+    const parts=[{text:txt}];
+    if(camStream){
+      const frame=getCamFrame();
+      if(frame)parts.push({inlineData:{mimeType:'image/jpeg',data:frame}});
+    }
+    const msgObj={role:'user',text:txt,time:now(),imgs:[],vids:[]};
+    setTitle(txt);
+    await doSend(txt,parts,msgObj);
+    document.getElementById('inpTxt').value='';
+    if(liveMode)setTimeout(startLiveRecog,1000);
+  };
+  liveRecog.onerror=()=>{if(liveMode)setTimeout(startLiveRecog,2000);};
+  liveRecog.onend=()=>{if(liveMode)setTimeout(startLiveRecog,500);};
+  liveRecog.start();
+}
+
+// Override speak to auto-speak in live mode
+const _origDoSend=doSend;
 }
 </script>
 </body>
